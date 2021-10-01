@@ -50,15 +50,10 @@ namespace picongpu
                  */
                 template<uint32_t T_numWorkers, typename T_BlockDescription, typename T_Acc, typename T_FieldBox>
                 DINLINE static auto create(T_Acc const& acc, T_FieldBox const& fieldBox, uint32_t const workerIdx)
-#if(!BOOST_COMP_CLANG)
-                    -> decltype(CachedBox::create<0u, typename T_FieldBox::ValueType>(
-                        acc,
-                        std::declval<T_BlockDescription>()))
-#endif
                 {
                     using ValueType = typename T_FieldBox::ValueType;
                     /* this memory is used by all virtual blocks */
-                    auto cache = CachedBox::create<0u, ValueType>(acc, T_BlockDescription{});
+                    auto cache = CachedBox::create<0u, sharedDataBoxMapping, ValueType>(acc, T_BlockDescription{});
 
                     Set<ValueType> set(ValueType::create(0.0_X));
                     ThreadCollective<T_BlockDescription, T_numWorkers> collectiveFill(workerIdx);
@@ -101,9 +96,6 @@ namespace picongpu
                  */
                 template<uint32_t T_numWorkers, typename T_BlockDescription, typename T_Acc, typename T_FieldBox>
                 DINLINE static auto create(T_Acc const& acc, T_FieldBox const& fieldBox, uint32_t const workerIdx)
-#if(!BOOST_COMP_CLANG)
-                    -> T_FieldBox
-#endif
                 {
                     alpaka::ignore_unused(acc, workerIdx);
                     return fieldBox;

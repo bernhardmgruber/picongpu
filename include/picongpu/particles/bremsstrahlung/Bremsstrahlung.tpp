@@ -82,7 +82,7 @@ namespace picongpu
                 const T_WorkerCfg& workerCfg)
             {
                 /* caching of ion density field */
-                cachedIonDensity = CachedBox::create<0, ValueTypeIonDensity>(acc, BlockArea());
+                cachedIonDensity = CachedBox::create<0, sharedDataBoxMapping, ValueTypeIonDensity>(acc, BlockArea());
 
                 /* instance of nvidia assignment operator */
                 pmacc::math::operation::Assign assign;

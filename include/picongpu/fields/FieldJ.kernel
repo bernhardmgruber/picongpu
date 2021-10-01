@@ -257,7 +257,9 @@ namespace picongpu
 
                 uint32_t const workerIdx = cupla::threadIdx(acc).x;
 
-                auto cachedJ = CachedBox::create<0, typename FieldJ::DataBoxType::ValueType>(acc, BlockArea());
+                auto cachedJ = CachedBox::create<0, sharedDataBoxMapping, typename FieldJ::DataBoxType::ValueType>(
+                    acc,
+                    BlockArea());
 
                 pmacc::math::operation::Assign assign;
                 DataSpace<simDim> const block(mapper.getSuperCellIndex(DataSpace<simDim>(cupla::blockIdx(acc))));

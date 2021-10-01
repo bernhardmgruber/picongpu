@@ -167,7 +167,10 @@ namespace picongpu
                         pmacc::math::operation::Assign assign;
                         auto srcFieldBlock = srcField.shift(beginCellIdx);
                         ThreadCollective<StencilCfg, numWorkers> cacheStencilArea(workerIdx);
-                        auto cachedSrcField = CachedBox::create<0u, typename T_SrcBox::ValueType>(acc, StencilCfg{});
+                        auto cachedSrcField
+                            = CachedBox::create<0u, sharedDataBoxMapping, typename T_SrcBox::ValueType>(
+                                acc,
+                                StencilCfg{});
                         cacheStencilArea(acc, assign, cachedSrcField, srcFieldBlock);
 
                         cupla::__syncthreads(acc);

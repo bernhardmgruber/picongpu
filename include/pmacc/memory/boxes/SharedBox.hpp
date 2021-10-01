@@ -21,12 +21,9 @@
 
 #pragma once
 
-#include "pmacc/math/Vector.hpp"
-#include "pmacc/memory/Array.hpp"
-#include "pmacc/memory/shared/Allocate.hpp"
-#include "pmacc/types.hpp"
+#include "pmacc/mappings/kernel/MappingDescription.hpp"
 
-#include "pmacc/cuSTL/cursor/compile-time/BufferCursor.hpp"
+#include <cstdint>
 
 namespace pmacc
 {
@@ -38,7 +35,12 @@ namespace pmacc
      *              (is needed if more than one instance of shared memory in one kernel is used)
      * @tparam T_dim dimension of the memory (supports DIM1,DIM2 and DIM3)
      */
-    template<typename T_TYPE, typename T_Vector, uint32_t T_id = 0, uint32_t T_dim = T_Vector::dim>
+    template<
+        typename T_TYPE,
+        typename T_Vector,
+        uint32_t T_id,
+        SharedDataBoxMapping mapping,
+        uint32_t T_dim = T_Vector::dim>
     struct SharedBox
     {
         T_TYPE* fixedPointer;

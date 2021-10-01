@@ -96,8 +96,8 @@ namespace picongpu
                 PMACC_ALIGN(eBox, FieldE::DataBoxType);
                 PMACC_ALIGN(bBox, FieldB::DataBoxType);
                 /* shared memory EM-field device databoxes */
-                PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize, 1>>);
-                PMACC_ALIGN(cachedB, DataBox<SharedBox<ValueType_B, typename BlockArea::FullSuperCellSize, 0>>);
+                PMACC_ALIGN(cachedE, DataBox<SharedBox<ValueType_E, typename BlockArea::FullSuperCellSize, 1, sharedDataBoxMapping>>);
+                PMACC_ALIGN(cachedB, DataBox<SharedBox<ValueType_B, typename BlockArea::FullSuperCellSize, 0, sharedDataBoxMapping>>);
 
                 PMACC_ALIGN(curF_1, SynchrotronFunctions::SyncFuncCursor);
                 PMACC_ALIGN(curF_2, SynchrotronFunctions::SyncFuncCursor);
@@ -147,8 +147,8 @@ namespace picongpu
                     const T_WorkerCfg& workerCfg)
                 {
                     /* caching of E and B fields */
-                    cachedB = CachedBox::create<0, ValueType_B>(acc, BlockArea());
-                    cachedE = CachedBox::create<1, ValueType_E>(acc, BlockArea());
+                    cachedB = CachedBox::create<0, sharedDataBoxMapping, ValueType_B>(acc, BlockArea());
+                    cachedE = CachedBox::create<1, sharedDataBoxMapping, ValueType_E>(acc, BlockArea());
 
                     /* instance of nvidia assignment operator */
                     pmacc::math::operation::Assign assign;

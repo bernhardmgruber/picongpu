@@ -23,6 +23,7 @@
 
 #include "picongpu/fields/CellType.hpp"
 #include "picongpu/fields/FieldTmp.hpp"
+#include "picongpu/param/memory.param"
 #include "picongpu/particles/ionization/byCollision/ThomasFermi/AlgorithmThomasFermi.hpp"
 #include "picongpu/particles/ionization/byCollision/ThomasFermi/ThomasFermi.def"
 
@@ -103,8 +104,12 @@ namespace picongpu
                 PMACC_ALIGN(eneBox, FieldTmp::DataBoxType);
 
                 /* shared memory EM-field device databoxes */
-                PMACC_ALIGN(cachedRho, DataBox<SharedBox<ValueType_Rho, typename BlockArea::FullSuperCellSize, 0>>);
-                PMACC_ALIGN(cachedEne, DataBox<SharedBox<ValueType_Ene, typename BlockArea::FullSuperCellSize, 1>>);
+                PMACC_ALIGN(
+                    cachedRho,
+                    DataBox<SharedBox<ValueType_Rho, typename BlockArea::FullSuperCellSize, 0, sharedDataBoxMapping>>);
+                PMACC_ALIGN(
+                    cachedEne,
+                    DataBox<SharedBox<ValueType_Ene, typename BlockArea::FullSuperCellSize, 1, sharedDataBoxMapping>>);
 
             public:
                 /* host constructor initializing member : random number generator */
@@ -188,8 +193,8 @@ namespace picongpu
                     const T_WorkerCfg& workerCfg)
                 {
                     /* caching of density and "temperature" fields */
-                    cachedRho = CachedBox::create<0, ValueType_Rho>(acc, BlockArea());
-                    cachedEne = CachedBox::create<1, ValueType_Ene>(acc, BlockArea());
+                    cachedRho = CachedBox::create<0, sharedDataBoxMapping, ValueType_Rho>(acc, BlockArea());
+                    cachedEne = CachedBox::create<1, sharedDataBoxMapping, ValueType_Ene>(acc, BlockArea());
 
                     /* instance of nvidia assignment operator */
                     pmacc::math::operation::Assign assign;

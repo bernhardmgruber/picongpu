@@ -99,7 +99,8 @@ namespace picongpu
             if(!frame.isValid())
                 return; // end kernel if we have no frames
 
-            auto cachedVal = CachedBox::create<0, typename T_TmpBox::ValueType>(acc, T_BlockDescription{});
+            auto cachedVal
+                = CachedBox::create<0, sharedDataBoxMapping, typename T_TmpBox::ValueType>(acc, T_BlockDescription{});
             Set<typename T_TmpBox::ValueType> set(float_X(0.0));
 
             ThreadCollective<T_BlockDescription, numWorkers> collective(workerIdx);

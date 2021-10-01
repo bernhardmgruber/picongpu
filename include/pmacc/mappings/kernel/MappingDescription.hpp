@@ -137,4 +137,14 @@ namespace pmacc
         SoA,
         SoASplitVector
     };
+
+    enum class SharedDataBoxMapping
+    {
+        AoS,
+        AoSSplitVector, // same effect as AoS, just to test LLAMA overhead
+        SoA, // same as AoS
+        SoASplitVector,
+        AoSSplitVectorFortran,
+        SoASplitVectorFortran
+    };
 } // namespace pmacc

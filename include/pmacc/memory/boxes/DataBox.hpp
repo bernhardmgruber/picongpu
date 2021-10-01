@@ -23,23 +23,14 @@
 #pragma once
 
 #include "SharedBox.hpp"
+#include "pmacc/cuSTL/cursor/Cursor.hpp"
 #include "pmacc/dimensions/DataSpace.hpp"
+#include "pmacc/memory/shared/Allocate.hpp"
 
 #include <llama/llama.hpp>
 
 namespace pmacc
 {
-    enum class SharedDataBoxMapping
-    {
-        AoS,
-        AoSSplitVector, // same effect as AoS, just to test LLAMA overhead
-        SoA, // same as AoS
-        SoASplitVector,
-        AoSSplitVectorFortran,
-        SoASplitVectorFortran
-    };
-    inline constexpr auto sharedDataBoxMapping = SharedDataBoxMapping::AoS;
-
     namespace detail
     {
         template<typename DataBox>
@@ -94,12 +85,13 @@ namespace pmacc
         template<typename X, typename Y, typename Z>
         HDINLINE auto toAE(math::CT::Vector<X, Y, Z>)
         {
-            if constexpr(std::is_same_v<Y, boost::mpl::na>)
+            constexpr auto dim = math::CT::Vector<X, Y, Z>::dim;
+            if constexpr(dim == 1)
                 return llama::ArrayExtents<X::value>{};
-            else if constexpr(std::is_same_v<Z, boost::mpl::na>)
-                return llama::ArrayExtents<X::value, Y::value>{};
-            else
-                return llama::ArrayExtents<X::value, Y::value, Z::value>{};
+            else if constexpr(dim == 2)
+                return llama::ArrayExtents<Y::value, X::value>{};
+            else if constexpr(dim == 3)
+                return llama::ArrayExtents<Z::value, Y::value, X::value>{};
         }
 
         // LLAMA and DataSpace indices have the same semantic, fast moving index is first.
@@ -153,10 +145,10 @@ namespace pmacc
     } // namespace internal
 
     // handle DataBox wrapping SharedBox with LLAMA
-    template<typename T_TYPE, class T_SizeVector, uint32_t T_id, uint32_t T_dim>
-    struct DataBox<SharedBox<T_TYPE, T_SizeVector, T_id, T_dim>>
+    template<typename T_TYPE, class T_SizeVector, SharedDataBoxMapping T_Mapping, uint32_t T_id, uint32_t T_dim>
+    struct DataBox<SharedBox<T_TYPE, T_SizeVector, T_id, T_Mapping, T_dim>>
     {
-        using SB = SharedBox<T_TYPE, T_SizeVector, T_id, T_dim>;
+        using SB = SharedBox<T_TYPE, T_SizeVector, T_id, T_Mapping, T_dim>;
 
         static constexpr std::uint32_t Dim = T_dim;
         using ValueType = T_TYPE;
@@ -175,22 +167,22 @@ namespace pmacc
         using SoASplitFortran
             = llama::mapping::SoA<ArrayExtents, SplitRecordDim, false, llama::mapping::LinearizeArrayDimsFortran>;
         using Mapping = std::conditional_t<
-            sharedDataBoxMapping == SharedDataBoxMapping::SoA,
+            T_Mapping == SharedDataBoxMapping::SoA,
             SoA,
             std::conditional_t<
-                sharedDataBoxMapping == SharedDataBoxMapping::SoASplitVector,
+                T_Mapping == SharedDataBoxMapping::SoASplitVector,
                 SoASplit,
                 std::conditional_t<
-                    sharedDataBoxMapping == SharedDataBoxMapping::AoS,
+                    T_Mapping == SharedDataBoxMapping::AoS,
                     AoS,
                     std::conditional_t<
-                        sharedDataBoxMapping == SharedDataBoxMapping::AoSSplitVector,
+                        T_Mapping == SharedDataBoxMapping::AoSSplitVector,
                         AoSSplit,
                         std::conditional_t<
-                            sharedDataBoxMapping == SharedDataBoxMapping::AoSSplitVectorFortran,
+                            T_Mapping == SharedDataBoxMapping::AoSSplitVectorFortran,
                             AoSSplitFortran,
                             std::conditional_t<
-                                sharedDataBoxMapping == SharedDataBoxMapping::SoASplitVectorFortran,
+                                T_Mapping == SharedDataBoxMapping::SoASplitVectorFortran,
                                 SoASplitFortran,
                                 void>>>>>>;
 

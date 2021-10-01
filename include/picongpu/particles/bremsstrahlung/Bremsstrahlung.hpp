@@ -87,7 +87,11 @@ namespace picongpu
                 /* shared memory ion density device databoxes */
                 PMACC_ALIGN(
                     cachedIonDensity,
-                    DataBox<SharedBox<ValueTypeIonDensity, typename BlockArea::FullSuperCellSize, 0>>);
+                    DataBox<SharedBox<
+                        ValueTypeIonDensity,
+                        typename BlockArea::FullSuperCellSize,
+                        0,
+                        sharedDataBoxMapping>>);
 
                 PMACC_ALIGN(scaledSpectrumFunctor, ScaledSpectrum::LookupTableFunctor);
                 PMACC_ALIGN(stoppingPowerFunctor, ScaledSpectrum::LookupTableFunctor);

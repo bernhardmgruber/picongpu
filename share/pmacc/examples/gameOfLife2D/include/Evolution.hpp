@@ -74,7 +74,7 @@ namespace gol
                 using Type = typename T_BoxReadOnly::ValueType;
                 using SuperCellSize = typename T_Mapping::SuperCellSize;
                 using BlockArea = SuperCellDescription<SuperCellSize, math::CT::Int<1, 1>, math::CT::Int<1, 1>>;
-                auto cache = CachedBox::create<0, Type>(acc, BlockArea());
+                auto cache = CachedBox::create<0, sharedDataBoxMapping, Type>(acc, BlockArea());
 
                 Space const block(mapper.getSuperCellIndex(Space(cupla::blockIdx(acc))));
                 Space const blockCell = block * T_Mapping::SuperCellSize::toRT();

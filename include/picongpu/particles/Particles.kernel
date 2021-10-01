@@ -239,8 +239,8 @@ namespace picongpu
             frame = pb.getLastFrame(block);
             particlesInSuperCell = pb.getSuperCell(block).getSizeLastFrame();
 
-            auto cachedB = CachedBox::create<0, typename T_BBox::ValueType>(acc, T_DataDomain());
-            auto cachedE = CachedBox::create<1, typename T_EBox::ValueType>(acc, T_DataDomain());
+            auto cachedB = CachedBox::create<0, sharedDataBoxMapping, typename T_BBox::ValueType>(acc, T_DataDomain());
+            auto cachedE = CachedBox::create<1, sharedDataBoxMapping, typename T_EBox::ValueType>(acc, T_DataDomain());
 
             cupla::__syncthreads(acc);
 

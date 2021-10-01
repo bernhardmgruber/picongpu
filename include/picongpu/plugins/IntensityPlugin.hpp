@@ -68,7 +68,7 @@ namespace picongpu
             typedef SuperCellDescription<pmacc::math::CT::Int<SuperCellSize::x::value, SuperCellSize::y::value>>
                 SuperCell2D;
 
-            auto s_field = CachedBox::create<0, float_32>(acc, SuperCell2D());
+            auto s_field = CachedBox::create<0, sharedDataBoxMapping, float_32>(acc, SuperCell2D());
 
             int y = cupla::blockIdx(acc).y * SuperCellSize::y::value + cupla::threadIdx(acc).y;
             int yGlobal = y + GuardSize::y::value * SuperCellSize::y::value;
