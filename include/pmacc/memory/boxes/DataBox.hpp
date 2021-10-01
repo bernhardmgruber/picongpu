@@ -22,10 +22,24 @@
 
 #pragma once
 
+#include "SharedBox.hpp"
 #include "pmacc/dimensions/DataSpace.hpp"
+
+#include <llama/llama.hpp>
 
 namespace pmacc
 {
+    enum class SharedDataBoxMapping
+    {
+        AoS,
+        AoSSplitVector, // same effect as AoS, just to test LLAMA overhead
+        SoA, // same as AoS
+        SoASplitVector,
+        AoSSplitVectorFortran,
+        SoASplitVectorFortran
+    };
+    inline constexpr auto sharedDataBoxMapping = SharedDataBoxMapping::AoS;
+
     namespace detail
     {
         template<typename DataBox>
@@ -65,7 +79,7 @@ namespace pmacc
         HDINLINE DataBox shift(DataSpace<Base::Dim> const& offset) const
         {
             DataBox result(*this);
-            result.fixedPointer = &((*this)(offset));
+            result.fixedPointer = &((*this) (offset));
             return result;
         }
 
@@ -73,5 +87,159 @@ namespace pmacc
         {
             return Base::reduceZ(zOffset);
         }
+    };
+
+    namespace internal
+    {
+        template<typename X, typename Y, typename Z>
+        HDINLINE auto toAE(math::CT::Vector<X, Y, Z>)
+        {
+            if constexpr(std::is_same_v<Y, boost::mpl::na>)
+                return llama::ArrayExtents<X::value>{};
+            else if constexpr(std::is_same_v<Z, boost::mpl::na>)
+                return llama::ArrayExtents<X::value, Y::value>{};
+            else
+                return llama::ArrayExtents<X::value, Y::value, Z::value>{};
+        }
+
+        // LLAMA and DataSpace indices have the same semantic, fast moving index is first.
+        HDINLINE auto toAI(DataSpace<1> idx)
+        {
+            return llama::ArrayIndex<1>{static_cast<std::size_t>(idx[0])};
+        }
+
+        HDINLINE auto toAI(DataSpace<2> idx)
+        {
+            return llama::ArrayIndex<2>{static_cast<std::size_t>(idx[1]), static_cast<std::size_t>(idx[0])};
+        }
+
+        HDINLINE auto toAI(DataSpace<3> idx)
+        {
+            return llama::ArrayIndex<3>{
+                static_cast<std::size_t>(idx[2]),
+                static_cast<std::size_t>(idx[1]),
+                static_cast<std::size_t>(idx[0])};
+        }
+
+        template<typename DataBox>
+        struct LlamaAccessor
+        {
+            static constexpr auto dim = DataBox::Dim;
+
+            using Reference = decltype(std::declval<DataBox&>()(DataSpace<dim>{}));
+            using ValueType = typename DataBox::ValueType;
+
+            HDINLINE decltype(auto) operator()(DataSpace<dim> idx) const
+            {
+                return db(idx);
+            }
+
+            DataBox db; // A cursor can outlive its DataBox, so it must carry on a copy of it.
+        };
+
+        template<std::size_t Dim>
+        struct DataspaceNavigator
+        {
+            template<typename Jump>
+            HDINLINE auto operator()(DataSpace<Dim> ds, const Jump& jump) const
+            {
+                return ds + jump;
+            }
+        };
+
+        template<typename DataBox>
+        using LlamaCursor
+            = cursor::Cursor<LlamaAccessor<DataBox>, DataspaceNavigator<DataBox::Dim>, DataSpace<DataBox::Dim>>;
+    } // namespace internal
+
+    // handle DataBox wrapping SharedBox with LLAMA
+    template<typename T_TYPE, class T_SizeVector, uint32_t T_id, uint32_t T_dim>
+    struct DataBox<SharedBox<T_TYPE, T_SizeVector, T_id, T_dim>>
+    {
+        using SB = SharedBox<T_TYPE, T_SizeVector, T_id, T_dim>;
+
+        static constexpr std::uint32_t Dim = T_dim;
+        using ValueType = T_TYPE;
+        using RefValueType = ValueType&;
+        using Size = T_SizeVector;
+
+        using SplitRecordDim = llama::TransformLeaves<T_TYPE, math::ReplaceVector>;
+        using ArrayExtents = decltype(internal::toAE(T_SizeVector{}));
+
+        using AoS = llama::mapping::AoS<ArrayExtents, T_TYPE>;
+        using AoSSplit = llama::mapping::AoS<ArrayExtents, SplitRecordDim>;
+        using AoSSplitFortran
+            = llama::mapping::AoS<ArrayExtents, SplitRecordDim, true, llama::mapping::LinearizeArrayDimsFortran>;
+        using SoA = llama::mapping::SoA<ArrayExtents, T_TYPE, false>;
+        using SoASplit = llama::mapping::SoA<ArrayExtents, SplitRecordDim, false>;
+        using SoASplitFortran
+            = llama::mapping::SoA<ArrayExtents, SplitRecordDim, false, llama::mapping::LinearizeArrayDimsFortran>;
+        using Mapping = std::conditional_t<
+            sharedDataBoxMapping == SharedDataBoxMapping::SoA,
+            SoA,
+            std::conditional_t<
+                sharedDataBoxMapping == SharedDataBoxMapping::SoASplitVector,
+                SoASplit,
+                std::conditional_t<
+                    sharedDataBoxMapping == SharedDataBoxMapping::AoS,
+                    AoS,
+                    std::conditional_t<
+                        sharedDataBoxMapping == SharedDataBoxMapping::AoSSplitVector,
+                        AoSSplit,
+                        std::conditional_t<
+                            sharedDataBoxMapping == SharedDataBoxMapping::AoSSplitVectorFortran,
+                            AoSSplitFortran,
+                            std::conditional_t<
+                                sharedDataBoxMapping == SharedDataBoxMapping::SoASplitVectorFortran,
+                                SoASplitFortran,
+                                void>>>>>>;
+
+        using View = llama::View<Mapping, std::byte*>;
+
+        View view;
+
+        HDINLINE DataBox() = default;
+
+        HDINLINE DataBox(SB sb)
+            : view{
+                Mapping{{}},
+                llama::Array{const_cast<std::byte*>(reinterpret_cast<const std::byte*>(sb.fixedPointer))}}
+        {
+        }
+
+        HDINLINE decltype(auto) operator()(DataSpace<T_dim> idx = {}) const
+        {
+            auto&& v = const_cast<View&>(view)(internal::toAI(idx + offset));
+            using ReturnType = std::remove_reference_t<decltype(v)>;
+            if constexpr(math::isVector<T_TYPE> && llama::is_VirtualRecord<ReturnType>)
+                return math::makeVectorWithLlamaStorage<T_TYPE>(v);
+            else
+                return v;
+        }
+
+        HDINLINE auto toCursor() const
+        {
+            return internal::LlamaCursor<DataBox>{
+                internal::LlamaAccessor<DataBox>{*this},
+                internal::DataspaceNavigator<T_dim>{},
+                DataSpace<T_dim>{}};
+        }
+
+        HDINLINE DataBox shift(const DataSpace<T_dim>& offset) const
+        {
+            DataBox result(*this);
+            result.offset += offset;
+            return result;
+        }
+
+        template<typename T_Acc>
+        static DINLINE SB init(T_Acc const& acc)
+        {
+            auto& mem_sh
+                = memory::shared::allocate<T_id, memory::Array<ValueType, math::CT::volume<Size>::type::value>>(acc);
+            return {mem_sh.data()};
+        }
+
+        DataSpace<T_dim> offset{};
     };
 } // namespace pmacc
