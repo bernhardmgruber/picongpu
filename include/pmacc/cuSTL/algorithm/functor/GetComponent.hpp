@@ -42,15 +42,15 @@ namespace pmacc
                 }
 
                 template<typename Array, typename T_Acc>
-                HDINLINE Type& operator()(T_Acc const&, Array& array) const
+                HDINLINE Type& operator()(T_Acc const&, Array&& array) const
                 {
-                    return array[m_component];
+                    return std::forward<Array>(array)[m_component];
                 }
 
                 template<typename Array>
-                HDINLINE Type& operator()(Array& array) const
+                HDINLINE Type& operator()(Array&& array) const
                 {
-                    return array[m_component];
+                    return std::forward<Array>(array)[m_component];
                 }
             };
 

@@ -75,16 +75,16 @@ namespace pmacc
                 }
             };
 
-            template<typename VirtualRecord, int T_Dim>
+            template<typename T_Type, int T_Dim, typename VirtualRecord>
             struct Vector_llama_components
             {
                 static_assert(llama::is_VirtualRecord<VirtualRecord>);
 
                 static constexpr bool isConst = false;
                 static constexpr int dim = T_Dim;
-                VirtualRecord vr;
+                using type = T_Type;
 
-                using type = std::decay_t<decltype(vr(llama::RecordCoord<0>{}))>;
+                VirtualRecord vr;
 
                 HDINLINE
                 type& operator[](const int idx)
@@ -153,7 +153,7 @@ namespace pmacc
             typename T_Navigator = StandardNavigator,
             typename T_Storage = detail::Vector_components<T_Type, T_dim>>
         struct Vector
-            : private T_Storage
+            : public T_Storage
             , protected T_Accessor
             , protected T_Navigator
         {
@@ -871,7 +871,7 @@ namespace pmacc
             V::dim,
             typename V::Accessor,
             typename V::Navigator,
-            detail::Vector_llama_components<LlamaVirtualRecord, V::dim>>;
+            detail::Vector_llama_components<typename V::type, V::dim, LlamaVirtualRecord>>;
 
         template<typename V, typename LlamaVirtualRecord>
         HDINLINE auto makeVectorWithLlamaStorage(LlamaVirtualRecord vr)
