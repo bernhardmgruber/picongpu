@@ -188,6 +188,16 @@ endif()
 #       wrapper
 set(PMacc_LIBRARIES ${PMacc_LIBRARIES} cupla::cupla)
 
+################################################################################
+# LLAMA
+################################################################################
+
+set(LLAMA_BUILD_EXAMPLES OFF)
+set(BUILD_TESTING OFF)
+add_subdirectory(${PMacc_DIR}/../../thirdParty/llama ${CMAKE_BINARY_DIR}/llama)
+unset(LLAMA_BUILD_EXAMPLES)
+unset(BUILD_TESTING)
+list(APPEND PMacc_LIBRARIES llama::llama)
 
 ###############################################################################
 # CPU Architecture: available instruction sets for e.g. SIMD extensions
