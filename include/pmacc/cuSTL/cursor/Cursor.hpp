@@ -35,6 +35,21 @@ namespace pmacc
 {
     namespace cursor
     {
+        namespace detail
+        {
+            template<typename Accessor, typename = void>
+            struct ValueType
+            {
+                using type = std::remove_reference_t<typename Accessor::Reference>;
+            };
+
+            template<typename Accessor>
+            struct ValueType<Accessor, std::void_t<typename Accessor::ValueType>>
+            {
+                using type = typename Accessor::ValueType;
+            };
+        } // namespace detail
+
         /** A cursor is used to access a single datum and to jump to another one.
          * It is always located at a certain datum. Think of a generalized iterator.
          * @tparam _Accessor Policy functor class that is called inside operator*().
@@ -51,7 +66,7 @@ namespace pmacc
         {
         public:
             using Reference = typename _Accessor::Reference;
-            using ValueType = std::remove_reference_t<Reference>;
+            using ValueType = typename detail::ValueType<_Accessor>::type;
             using Accessor = _Accessor;
             using Navigator = _Navigator;
             using Marker = _Marker;

@@ -81,7 +81,8 @@ namespace picongpu
                 const DataSpace<simDim>& blockCell)
             {
                 /* caching of ion density field */
-                cachedIonDensity = CachedBox::create<0, ValueTypeIonDensity>(worker, BlockArea());
+                cachedIonDensity
+                    = CachedBox::create<0, SharedDataBoxMemoryLayout, ValueTypeIonDensity>(worker, BlockArea());
 
                 /* instance of nvidia assignment operator */
                 pmacc::math::operation::Assign assign;
