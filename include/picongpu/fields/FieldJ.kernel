@@ -211,7 +211,7 @@ namespace picongpu
                 const DataSpace<simDim> localCell(DataSpaceOperations<simDim>::template map<TVec>(particleCellIdx));
 
                 Velocity velocity;
-                const float3_X vel = velocity(particle[momentum_], attribute::getMass(weighting, particle));
+                const float3_X vel = velocity(static_cast<float3_X>(particle[momentum_]), attribute::getMass(weighting, particle));
                 auto fieldJShiftToParticle = jBox.shift(localCell);
                 ParticleAlgo perParticle;
                 perParticle(acc, fieldJShiftToParticle, pos, vel, charge, m_deltaTime);
