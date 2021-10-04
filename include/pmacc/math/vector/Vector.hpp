@@ -36,6 +36,8 @@
 #include <iostream>
 #include <type_traits>
 
+#include <llama/llama.hpp>
+
 namespace pmacc
 {
     namespace math
@@ -73,6 +75,33 @@ namespace pmacc
                 }
             };
 
+            template<typename VirtualRecord, int T_Dim>
+            struct Vector_llama_components
+            {
+                static_assert(llama::is_VirtualRecord<VirtualRecord>);
+
+                static constexpr bool isConst = false;
+                static constexpr int dim = T_Dim;
+                VirtualRecord vr;
+
+                using type = std::decay_t<decltype(vr(llama::RecordCoord<0>{}))>;
+
+                HDINLINE
+                type& operator[](const int idx)
+                {
+                    return boost::mp11::mp_with_index<T_Dim>(
+                        idx,
+                        [&](auto ic) -> decltype(auto) { return vr(llama::RecordCoord<decltype(ic)::value>{}); });
+                }
+
+                HDINLINE
+                const type& operator[](const int idx) const
+                {
+                    return boost::mp11::mp_with_index<T_Dim>(
+                        idx,
+                        [&](auto ic) -> decltype(auto) { return vr(llama::RecordCoord<decltype(ic)::value>{}); });
+                }
+            };
 
             /** functor to copy a object element-wise
              *
@@ -145,6 +174,11 @@ namespace pmacc
             }
 
             HDINLINE
+            constexpr explicit Vector(Storage s) : Storage{std::move(s)}
+            {
+            }
+
+            HDINLINE
             constexpr Vector(const type x)
             {
                 PMACC_CASSERT_MSG(math_Vector__constructor_is_only_allowed_for_DIM1, dim == 1);
@@ -172,6 +206,20 @@ namespace pmacc
             constexpr Vector(const Vector& other)
             {
                 detail::CopyElementWise<Storage::isConst>()(*this, other);
+            }
+
+            // template<
+            //    typename T_OtherType,
+            //    int T_OtherDim,
+            //    typename T_OtherAccessor,
+            //    typename T_OtherNavigator,
+            //    typename T_OtherStorage>
+            // friend class Vector<T_OtherType, T_OtherDim, T_OtherAccessor, T_OtherNavigator, T_OtherStorage>;
+
+            template<typename T_OtherAccessor, typename T_OtherNavigator>
+            HDINLINE Vector(const Vector<T_Type, dim, T_OtherAccessor, T_OtherNavigator, Storage>& other)
+                : Storage{static_cast<const Storage&>(other)}
+            {
             }
 
             template<typename T_OtherAccessor, typename T_OtherNavigator, typename T_OtherStorage>
@@ -570,6 +618,12 @@ namespace pmacc
             }
         };
 
+        template<typename T>
+        inline constexpr bool isVector = false;
+
+        template<typename T_Type, int T_dim, typename T_Accessor, typename T_Navigator, typename T_Storage>
+        inline constexpr bool isVector<pmacc::math::Vector<T_Type, T_dim, T_Accessor, T_Navigator, T_Storage>> = true;
+
         template<typename Type, int dim, typename Accessor, typename Navigator>
         std::ostream& operator<<(std::ostream& s, const Vector<Type, dim, Accessor, Navigator>& vec)
         {
@@ -811,6 +865,37 @@ namespace pmacc
         template<typename T_Vector, uint32_t T_direction>
         HDINLINE T_Vector basisVector();
 
+        template<typename V, typename LlamaVirtualRecord>
+        using VectorWithLlamaStorage = Vector<
+            typename V::type,
+            V::dim,
+            typename V::Accessor,
+            typename V::Navigator,
+            detail::Vector_llama_components<LlamaVirtualRecord, V::dim>>;
+
+        template<typename V, typename LlamaVirtualRecord>
+        HDINLINE auto makeVectorWithLlamaStorage(LlamaVirtualRecord vr)
+        {
+            return VectorWithLlamaStorage<V, LlamaVirtualRecord>{{vr}};
+        }
+
+        namespace detail
+        {
+            template<typename T>
+            struct ReplaceVectorImpl
+            {
+                using type = T;
+            };
+
+            template<typename T_Type, int T_dim, typename T_Accessor, typename T_Navigator, typename T_Storage>
+            struct ReplaceVectorImpl<Vector<T_Type, T_dim, T_Accessor, T_Navigator, T_Storage>>
+            {
+                using type = T_Type[T_dim];
+            };
+        } // namespace detail
+
+        template<typename T>
+        using ReplaceVector = typename detail::ReplaceVectorImpl<T>::type;
     } // namespace math
 
     namespace result_of

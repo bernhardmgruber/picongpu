@@ -59,7 +59,8 @@ namespace pmacc
         typename T_HandleGuardRegion
         = HandleGuardRegion<particles::policies::ExchangeParticles, particles::policies::DeleteParticles>,
         typename T_MethodsList = bmpl::vector0<>,
-        typename T_FrameExtensionList = bmpl::vector0<>>
+        typename T_FrameExtensionList = bmpl::vector0<>,
+        ParticleFrameMapping T_ParticleFrameMapping = ParticleFrameMapping::SoA>
     struct ParticleDescription
     {
         using Name = T_Name;
@@ -69,6 +70,7 @@ namespace pmacc
         using HandleGuardRegion = T_HandleGuardRegion;
         using MethodsList = typename ToSeq<T_MethodsList>::type;
         using FrameExtensionList = typename ToSeq<T_FrameExtensionList>::type;
+        static constexpr ParticleFrameMapping frameMapping = T_ParticleFrameMapping;
         using ThisType = ParticleDescription<
             Name,
             SuperCellSize,
@@ -76,7 +78,8 @@ namespace pmacc
             FlagsList,
             HandleGuardRegion,
             MethodsList,
-            FrameExtensionList>;
+            FrameExtensionList,
+            frameMapping>;
     };
 
 
@@ -97,7 +100,8 @@ namespace pmacc
             typename OldParticleDescription::FlagsList,
             typename OldParticleDescription::HandleGuardRegion,
             typename OldParticleDescription::MethodsList,
-            typename OldParticleDescription::FrameExtensionList>;
+            typename OldParticleDescription::FrameExtensionList,
+            OldParticleDescription::frameMapping>;
     };
 
     /** Get ParticleDescription with a new FrameExtensionSeq
@@ -117,7 +121,8 @@ namespace pmacc
             typename OldParticleDescription::FlagsList,
             typename OldParticleDescription::HandleGuardRegion,
             typename OldParticleDescription::MethodsList,
-            typename ToSeq<T_FrameExtensionSeq>::type>;
+            typename ToSeq<T_FrameExtensionSeq>::type,
+            OldParticleDescription::frameMapping>;
     };
 
 } // namespace pmacc
