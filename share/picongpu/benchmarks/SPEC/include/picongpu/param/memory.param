@@ -112,4 +112,5 @@ namespace picongpu
      */
     constexpr bool fieldTmpSupportGatherCommunication = false;
 
+    inline constexpr auto particleFrameMapping = pmacc::ParticleFrameMapping::SoA;
 } // namespace picongpu

@@ -34,15 +34,115 @@
 #include "pmacc/traits/HasIdentifier.hpp"
 #include "pmacc/types.hpp"
 
+#include <boost/mp11.hpp>
+#include <boost/mp11/mpl.hpp>
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/find.hpp>
 #include <boost/mpl/list.hpp>
 #include <boost/mpl/map.hpp>
 #include <boost/utility/result_of.hpp>
 
+#include <llama/llama.hpp>
+
 namespace pmacc
 {
     namespace pmath = pmacc::math;
+
+    namespace detail
+    {
+        template<typename PICValueType>
+        using MakeLlamaField = llama::Field<PICValueType, typename traits::Resolve<PICValueType>::type::type>;
+
+        template<typename ValueTypeSeq>
+        using ValueTypeSeqToList =
+            typename boost::mpl::copy<ValueTypeSeq, boost::mpl::back_inserter<boost::mp11::mp_list<>>>::type;
+
+        template<typename ValueTypeSeq>
+        using RecordDimFromValueTypeSeq = boost::mp11::
+            mp_rename<boost::mp11::mp_transform<MakeLlamaField, ValueTypeSeqToList<ValueTypeSeq>>, llama::Record>;
+
+        template<typename T>
+        inline constexpr auto nonTypeArgOf = nullptr; // = delete;
+
+        template<template<auto> typename T, auto I>
+        inline constexpr auto nonTypeArgOf<T<I>> = I;
+
+        template<typename T_CreatePairOperator, typename T_ParticleDescription>
+        struct ViewHolder
+        {
+            static constexpr std::size_t particlesPerFrame
+                = nonTypeArgOf<T_CreatePairOperator>; // T_ParticleDescription::SuperCellSize
+            static constexpr ParticleFrameMapping frameMapping = T_ParticleDescription::frameMapping;
+
+            using RawRecordDim = RecordDimFromValueTypeSeq<typename T_ParticleDescription::ValueTypeSeq>;
+            using RecordDim = llama::TransformLeaves<RawRecordDim, pmath::ReplaceVector>;
+            using ArrayExtents = llama::ArrayExtents<particlesPerFrame>;
+
+            using AoS = llama::mapping::AoS<
+                ArrayExtents,
+                RawRecordDim,
+                true,
+                llama::mapping::LinearizeArrayDimsCpp,
+                llama::mapping::FlattenRecordDimMinimizePadding>;
+            using AoSSplit = llama::mapping::AoS<
+                ArrayExtents,
+                RecordDim,
+                true,
+                llama::mapping::LinearizeArrayDimsCpp,
+                llama::mapping::FlattenRecordDimMinimizePadding>;
+            using SoA = llama::mapping::SoA<ArrayExtents, RawRecordDim, false>;
+            using SoASplit = llama::mapping::SoA<ArrayExtents, RecordDim, false>;
+            using Mapping = std::conditional_t<
+                frameMapping == ParticleFrameMapping::SoA,
+                SoA,
+                std::conditional_t<
+                    frameMapping == ParticleFrameMapping::SoASplitVector,
+                    SoASplit,
+                    std::conditional_t<
+                        frameMapping == ParticleFrameMapping::AoS,
+                        AoS,
+                        std::conditional_t<frameMapping == ParticleFrameMapping::AoSSplitVector, AoSSplit, void>>>>;
+
+            using LlamaViewType = decltype(llama::allocView(
+                Mapping{ArrayExtents{}},
+                llama::bloballoc::Stack<Mapping{{}}.blobSize(0)>{}));
+            // PMACC_ALIGN(view, LlamaViewType);
+            LlamaViewType view;
+        };
+
+        template<typename VirtualRecord>
+        struct LlamaParticleAttribute
+        {
+            template<typename OtherVirtualRecord>
+            auto operator=(const LlamaParticleAttribute<OtherVirtualRecord>& lpa) -> LlamaParticleAttribute&
+            {
+                vr = lpa.vr;
+                return *this;
+            }
+
+            template<typename OtherVirtualRecord>
+            auto operator=(LlamaParticleAttribute<OtherVirtualRecord>&& lpa) -> LlamaParticleAttribute&
+            {
+                vr = lpa.vr;
+                return *this;
+            }
+
+            template<typename T>
+            auto operator=(T&& t) -> LlamaParticleAttribute&
+            {
+                vr.store(std::forward<T>(t));
+                return *this;
+            }
+
+            template<typename T>
+            operator T() const
+            {
+                return vr.template loadAs<T>();
+            }
+
+            VirtualRecord vr;
+        };
+    } // namespace detail
 
     /** Frame is a storage for arbitrary number >0 of Particles with attributes
      *
@@ -61,9 +161,7 @@ namespace pmacc
     template<typename T_CreatePairOperator, typename T_ParticleDescription>
     struct Frame
         : public InheritLinearly<typename T_ParticleDescription::MethodsList>
-        , protected pmath::MapTuple<
-              typename SeqToMap<typename T_ParticleDescription::ValueTypeSeq, T_CreatePairOperator>::type,
-              pmath::AlignedData>
+        , public detail::ViewHolder<T_CreatePairOperator, T_ParticleDescription>
         , public InheritLinearly<typename OperateOnSeq<
               typename T_ParticleDescription::FrameExtensionList,
               bmpl::apply1<bmpl::_1, Frame<T_CreatePairOperator, T_ParticleDescription>>>::type>
@@ -76,9 +174,8 @@ namespace pmacc
         using FlagList = typename ParticleDescription::FlagsList;
         using FrameExtensionList = typename ParticleDescription::FrameExtensionList;
         using ThisType = Frame<T_CreatePairOperator, ParticleDescription>;
-        /* definition of the MapTupel where we inherit from*/
-        using BaseType
-            = pmath::MapTuple<typename SeqToMap<ValueTypeSeq, T_CreatePairOperator>::type, pmath::AlignedData>;
+
+        using Map = typename SeqToMap<typename T_ParticleDescription::ValueTypeSeq, T_CreatePairOperator>::type;
 
         /* type of a single particle*/
         using ParticleType = pmacc::Particle<ThisType>;
@@ -95,25 +192,33 @@ namespace pmacc
             return ParticleType(*this, idx);
         }
 
-        /** access attribute with a identifier
-         *
-         * @param T_Key instance of identifier type
-         *              (can be an alias, value_identifier or any other class)
-         * @return result of operator[] of MapTupel
-         */
-        template<typename T_Key>
-        HDINLINE auto& getIdentifier(const T_Key)
+        template<typename Frame, typename T_Key>
+        static HDINLINE decltype(auto) at(Frame& f, uint32_t i, const T_Key key)
         {
             using Key = typename GetKeyFromAlias<ValueTypeSeq, T_Key, errorHandlerPolicies::ThrowValueNotFound>::type;
-            return BaseType::operator[](Key());
+            auto&& v = f.view(i)(Key{});
+
+            using OldDstType = typename traits::Resolve<Key>::type::type;
+            using ReturnType = std::remove_reference_t<decltype(v)>;
+
+            if constexpr(pmath::isVector<OldDstType> && llama::is_VirtualRecord<ReturnType>)
+                return pmath::makeVectorWithLlamaStorage<OldDstType>(v);
+            else if constexpr(llama::is_VirtualRecord<ReturnType>)
+                return detail::LlamaParticleAttribute<ReturnType>{v};
+            else
+                return v;
         }
 
-        /** const version of method getIdentifier(const T_Key) */
         template<typename T_Key>
-        HDINLINE const auto& getIdentifier(const T_Key) const
+        HDINLINE decltype(auto) get(uint32_t i, const T_Key)
         {
-            using Key = typename GetKeyFromAlias<ValueTypeSeq, T_Key, errorHandlerPolicies::ThrowValueNotFound>::type;
-            return BaseType::operator[](Key());
+            return at(*this, i, T_Key{});
+        }
+
+        template<typename T_Key>
+        HDINLINE decltype(auto) get(uint32_t i, const T_Key) const
+        {
+            return at(*this, i, T_Key{});
         }
 
         HINLINE static std::string getName()

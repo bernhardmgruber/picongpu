@@ -130,4 +130,11 @@ namespace pmacc
         PMACC_ALIGN(guardingSuperCells, DataSpace<DIM>);
     };
 
+    enum class ParticleFrameMapping
+    {
+        AoS,
+        AoSSplitVector, // same effect as AoS, just to test LLAMA overhead
+        SoA,
+        SoASplitVector
+    };
 } // namespace pmacc

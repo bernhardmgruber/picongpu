@@ -22,6 +22,7 @@
 
 #include "picongpu/fields/Fields.def"
 #include "picongpu/fields/Fields.hpp"
+#include "picongpu/param/memory.param"
 #include "picongpu/particles/boundary/Description.hpp"
 #include "picongpu/particles/boundary/Utility.hpp"
 #include "picongpu/particles/manipulators/manipulators.def"
@@ -91,7 +92,10 @@ namespace picongpu
                       // fallback if the species has not defined the alias boundaryCondition
                       pmacc::HandleGuardRegion<
                           pmacc::particles::policies::ExchangeParticles,
-                          pmacc::particles::policies::DoNothing>>::type>,
+                          pmacc::particles::policies::DoNothing>>::type,
+                  bmpl::vector0<>,
+                  bmpl::vector0<>,
+                  picongpu::particleFrameMapping>,
               MappingDesc,
               DeviceHeap>
         , public ISimulationData
@@ -110,7 +114,10 @@ namespace picongpu
                 // fallback if the species has not defined the alias boundaryCondition
                 pmacc::HandleGuardRegion<
                     pmacc::particles::policies::ExchangeParticles,
-                    pmacc::particles::policies::DoNothing>>::type>;
+                    pmacc::particles::policies::DoNothing>>::type,
+            bmpl::vector0<>,
+            bmpl::vector0<>,
+            picongpu::particleFrameMapping>;
         using ParticlesBaseType = ParticlesBase<SpeciesParticleDescription, picongpu::MappingDesc, DeviceHeap>;
         using FrameType = typename ParticlesBaseType::FrameType;
         using FrameTypeBorder = typename ParticlesBaseType::FrameTypeBorder;

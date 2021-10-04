@@ -43,10 +43,13 @@
 #include <pmacc/traits/HasFlag.hpp>
 #include <pmacc/traits/Resolve.hpp>
 
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <utility>
+
+#include <llama/DumpMapping.hpp>
 
 namespace picongpu
 {
@@ -216,6 +219,34 @@ namespace picongpu
             });
 
         size_t sizeOfExchanges = 0u;
+
+        //std::cout << "Frame:\n\tSize: " << sizeof(FrameType) << "\n\tLLAMA view offset: " << offsetof(FrameType, view)
+        //          << "\n\tLLAMA view size: " << sizeof(FrameType::view) << std::endl;
+
+        {
+            //using View = decltype(FrameType::view);
+            using M = typename decltype(FrameType::view)::Mapping;
+            auto m = M{};
+            //View view;
+            //std::cout << "view begin " << &view << "\n";
+            //std::cout << "storage begin " << &view.storageBlobs[0][0] << "\n";
+            //for(auto ad : llama::ArrayDimsIndexRange{m.arrayDims()})
+            //{
+            //    llama::forEachLeaf<typename M::RecordDim>(
+            //        [&](auto coord)
+            //        {
+            //            auto& e = view(ad)(coord);
+            //            std::cout << "ad " << ad << " coord " << coord << " addr " << (void*) &e << "\n";
+            //        });
+            //}
+            //std::cout << "view end " << (&view + 1) << "\n";
+
+            std::ofstream{"llama_frame.html"} << llama::toHtml(m);
+            std::ofstream{"llama_frame.svg"} << llama::toSvg(m);
+
+            //PMACC_VERIFY(
+            //    reinterpret_cast<std::byte*>(&view) == reinterpret_cast<std::byte*>(&view.storageBlobs[0][0]));
+        }
 
         const uint32_t commTag = pmacc::traits::GetUniqueTypeId<FrameType, uint32_t>::uid();
         log<picLog::MEMORY>("communication tag for species %1%: %2%") % FrameType::getName() % commTag;
