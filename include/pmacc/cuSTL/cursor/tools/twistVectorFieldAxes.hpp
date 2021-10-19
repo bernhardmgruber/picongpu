@@ -32,25 +32,6 @@ namespace pmacc
     {
         namespace tools
         {
-            namespace result_of
-            {
-                /** result for TwistVectorFieldAxes
-                 *
-                 * @tparam T_NavigatorPerm permutation vector for navigator
-                 * @tparam T_AccessorPerm permutation vector for the accessor
-                 * @tparam T_Cursor cursor to permute
-                 */
-                template<typename T_NavigatorPerm, typename T_AccessorPerm, typename T_Cursor>
-                struct TwistVectorFieldAxes
-                {
-                    using type = Cursor<
-                        TwistAxesAccessor<T_Cursor, T_AccessorPerm>,
-                        pmacc::cursor::CT::TwistAxesNavigator<T_NavigatorPerm>,
-                        T_Cursor>;
-                };
-
-            } // namespace result_of
-
             /** Returns a new cursor which looks like a vector field rotated version of the one passed
              *
              * When rotating a vector field in physics the coordinate system and the vectors themselves
@@ -62,58 +43,25 @@ namespace pmacc
              *
              * @tparam T_Permutation compile-time vector (pmacc::math::CT::Int) that describes the mapping.
              * x-axis -> T_Permutation::at<0>, y-axis -> T_Permutation::at<1>, ...
-             *
-             */
-            template<typename T_Permutation, typename T_Cursor>
-            HDINLINE typename result_of::TwistVectorFieldAxes<T_Permutation, T_Permutation, T_Cursor>::type
-            twistVectorFieldAxes(const T_Cursor& cursor)
-            {
-                return typename result_of::TwistVectorFieldAxes<T_Permutation, T_Permutation, T_Cursor>::type(
-                    TwistAxesAccessor<T_Cursor, T_Permutation>(),
-                    pmacc::cursor::CT::TwistAxesNavigator<T_Permutation>(),
-                    cursor);
-            }
-
-            /** permute navigation and access of a cursor
-             *
-             * use same permutation for accessor and navigator
-             *
-             * @tparam T_Permutation permutation vector
-             * @tparam T_Cursor permutation vector
-             * @param cursor cursor to permute
-             * @param permutation cursor to permute
-             */
-            template<typename T_Cursor, typename T_Permutation>
-            HDINLINE typename result_of::TwistVectorFieldAxes<T_Permutation, T_Permutation, T_Cursor>::type
-            twistVectorFieldAxes(const T_Cursor& cursor, const T_Permutation& /*permutation*/)
-            {
-                return typename result_of::TwistVectorFieldAxes<T_Permutation, T_Permutation, T_Cursor>::type(
-                    TwistAxesAccessor<T_Cursor, T_Permutation>(),
-                    pmacc::cursor::CT::TwistAxesNavigator<T_Permutation>(),
-                    cursor);
-            }
-
-            /** permute navigation and access of a cursor
-             *
-             * different dimensions for the accessor and navigator permutation vector are allowed
-             *
              * @param cursor cursor to permute
              * @param navigatorPermutation compile time permutation vector for the navigator
              * @param accessorPermutation compile time permutation vector for the accessor
              */
-            template<typename T_Cursor, typename T_NavigatorPerm, typename T_AccessorPerm>
-            HDINLINE typename result_of::TwistVectorFieldAxes<T_NavigatorPerm, T_AccessorPerm, T_Cursor>::type
+            template<typename T_NavigatorPerm, typename T_Cursor, typename T_AccessorPerm = T_NavigatorPerm>
+            HDINLINE Cursor<
+                TwistAxesAccessor<T_Cursor, T_AccessorPerm>,
+                CT::TwistAxesNavigator<T_NavigatorPerm>,
+                T_Cursor>
             twistVectorFieldAxes(
                 const T_Cursor& cursor,
-                const T_NavigatorPerm& /*navigatorPermutation*/,
-                const T_AccessorPerm& /*accessorPermutation*/)
+                T_NavigatorPerm /*navigatorPermutation*/ = {},
+                T_AccessorPerm /*accessorPermutation*/ = {})
             {
-                return typename result_of::TwistVectorFieldAxes<T_NavigatorPerm, T_AccessorPerm, T_Cursor>::type(
+                return {
                     TwistAxesAccessor<T_Cursor, T_AccessorPerm>(),
-                    pmacc::cursor::CT::TwistAxesNavigator<T_NavigatorPerm>(),
-                    cursor);
+                    CT::TwistAxesNavigator<T_NavigatorPerm>(),
+                    cursor};
             }
-
         } // namespace tools
     } // namespace cursor
 } // namespace pmacc
