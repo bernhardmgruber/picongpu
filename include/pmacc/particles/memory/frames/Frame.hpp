@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "pmacc/LlamaParticleAttribute.hpp"
 #include "pmacc/math/MapTuple.hpp"
 #include "pmacc/meta/GetKeyFromAlias.hpp"
 #include "pmacc/meta/conversion/OperateOnSeq.hpp"
@@ -108,39 +109,6 @@ namespace pmacc
                 llama::bloballoc::Stack<Mapping{{}}.blobSize(0)>{}));
             // PMACC_ALIGN(view, LlamaViewType);
             LlamaViewType view;
-        };
-
-        template<typename VirtualRecord>
-        struct LlamaParticleAttribute
-        {
-            template<typename OtherVirtualRecord>
-            auto operator=(const LlamaParticleAttribute<OtherVirtualRecord>& lpa) -> LlamaParticleAttribute&
-            {
-                vr = lpa.vr;
-                return *this;
-            }
-
-            template<typename OtherVirtualRecord>
-            auto operator=(LlamaParticleAttribute<OtherVirtualRecord>&& lpa) -> LlamaParticleAttribute&
-            {
-                vr = lpa.vr;
-                return *this;
-            }
-
-            template<typename T>
-            auto operator=(T&& t) -> LlamaParticleAttribute&
-            {
-                vr.store(std::forward<T>(t));
-                return *this;
-            }
-
-            template<typename T>
-            operator T() const
-            {
-                return vr.template loadAs<T>();
-            }
-
-            VirtualRecord vr;
         };
     } // namespace detail
 
