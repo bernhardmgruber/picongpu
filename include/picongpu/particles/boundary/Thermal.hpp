@@ -137,7 +137,7 @@ namespace picongpu
 
                         // Find the first time the particle crossed any boundary, in internal units
                         float_X timeAfterFirstBoundaryCross = 0._X;
-                        auto pos = particle[position_];
+                        floatD_X pos = particle[position_];
                         auto const epsilon = std::numeric_limits<float_X>::epsilon();
                         for(uint32_t d = 0; d < simDim; d++)
                         {

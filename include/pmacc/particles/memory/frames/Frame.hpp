@@ -201,9 +201,10 @@ namespace pmacc
             using OldDstType = typename traits::Resolve<Key>::type::type;
             using ReturnType = std::remove_reference_t<decltype(v)>;
 
-            if constexpr(pmath::isVector<OldDstType> && llama::is_VirtualRecord<ReturnType>)
-                return pmath::makeVectorWithLlamaStorage<OldDstType>(v);
-            else if constexpr(llama::is_VirtualRecord<ReturnType>)
+            // if constexpr(pmath::isVector<OldDstType> && llama::is_VirtualRecord<ReturnType>)
+            //    return pmath::makeVectorWithLlamaStorage<OldDstType>(v);
+            // else
+            if constexpr(llama::is_VirtualRecord<ReturnType>)
                 return detail::LlamaParticleAttribute<ReturnType>{v};
             else
                 return v;

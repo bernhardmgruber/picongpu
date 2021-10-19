@@ -54,7 +54,7 @@ namespace picongpu
                     if((offsetToTotalOrigin[m_parameters.axis] < m_parameters.beginInternalCellsTotal)
                        || (offsetToTotalOrigin[m_parameters.axis] >= m_parameters.endInternalCellsTotal))
                     {
-                        auto pos = particle[position_];
+                        floatD_X pos = particle[position_];
                         if(offsetToTotalOrigin[m_parameters.axis] >= m_parameters.endInternalCellsTotal)
                         {
                             /* Subtract epsilon so we are definitly in the cell left of the current

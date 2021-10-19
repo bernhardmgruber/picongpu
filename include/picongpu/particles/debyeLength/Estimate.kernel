@@ -132,7 +132,7 @@ namespace picongpu
                                     auto const weighting = float_64{particle[weighting_]};
                                     sumWeighting += weighting;
                                     auto const singleParticleMomentum
-                                        = precisionCast<float_64>(particle[momentum_]) / weighting;
+                                        = precisionCast<float_64>(floatD_32{particle[momentum_]}) / weighting;
                                     sumMomentum += weighting * singleParticleMomentum;
                                     sumMomentumSquared += weighting * singleParticleMomentum * singleParticleMomentum;
                                 }

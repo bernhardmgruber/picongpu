@@ -161,7 +161,7 @@ namespace picongpu
                             float_X const weighting = particle[weighting_];
                             float_X const normedWeighting
                                 = weighting / float_X(particles::TYPICAL_NUM_PARTICLES_PER_MACROPARTICLE);
-                            float3_X const mom = particle[momentum_] / weighting;
+                            float3_X const mom = float3_X{particle[momentum_]} / weighting;
                             floatD_X const pos = particle[position_];
                             lcellId_t const cellIdx = particle[localCellIdx_];
                             DataSpace<simDim> const frameCellOffset(
