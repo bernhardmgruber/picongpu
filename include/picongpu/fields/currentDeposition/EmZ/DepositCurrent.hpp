@@ -143,7 +143,7 @@ namespace picongpu
                                 const float_X W = this->DS(line, k, 2) * tmp;
                                 accumulated_J += W;
                                 auto const atomicOp = T_AtomicAddOp{};
-                                atomicOp(acc, (*cursorJ(i, j, k)).z(), accumulated_J);
+                                atomicOp(acc, (*cursorJ(i, j, k)).vr(llama::RecordCoord<2>{}), accumulated_J);
                             }
                         }
                     }

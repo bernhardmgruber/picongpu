@@ -23,6 +23,7 @@
 #pragma once
 
 #include "SharedBox.hpp"
+#include "pmacc/LlamaParticleAttribute.hpp"
 #include "pmacc/cuSTL/cursor/Cursor.hpp"
 #include "pmacc/dimensions/DataSpace.hpp"
 #include "pmacc/memory/shared/Allocate.hpp"
@@ -70,7 +71,7 @@ namespace pmacc
         HDINLINE DataBox shift(DataSpace<Base::Dim> const& offset) const
         {
             DataBox result(*this);
-            result.fixedPointer = &((*this) (offset));
+            result.fixedPointer = &((*this)(offset));
             return result;
         }
 
@@ -203,8 +204,11 @@ namespace pmacc
         {
             auto&& v = const_cast<View&>(view)(internal::toAI(idx + offset));
             using ReturnType = std::remove_reference_t<decltype(v)>;
-            if constexpr(math::isVector<T_TYPE> && llama::is_VirtualRecord<ReturnType>)
-                return math::makeVectorWithLlamaStorage<T_TYPE>(v);
+            //if constexpr(math::isVector<T_TYPE> && llama::is_VirtualRecord<ReturnType>)
+            //    return math::makeVectorWithLlamaStorage<T_TYPE>(v);
+            //else
+            if constexpr(llama::is_VirtualRecord<ReturnType>)
+                return detail::LlamaParticleAttribute<ReturnType>{v};
             else
                 return v;
         }

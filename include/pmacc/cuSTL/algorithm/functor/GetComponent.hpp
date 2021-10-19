@@ -44,13 +44,25 @@ namespace pmacc
                 template<typename Array, typename T_Acc>
                 HDINLINE Type& operator()(T_Acc const&, Array&& array) const
                 {
-                    return std::forward<Array>(array)[m_component];
+                    if(m_component == 0)
+                        return array.vr(llama::RecordCoord<0>{});
+                    if(m_component == 1)
+                        return array.vr(llama::RecordCoord<1>{});
+                    if(m_component == 2)
+                        return array.vr(llama::RecordCoord<2>{});
+                    std::abort();
                 }
 
                 template<typename Array>
                 HDINLINE Type& operator()(Array&& array) const
                 {
-                    return std::forward<Array>(array)[m_component];
+                    if(m_component == 0)
+                        return array.vr(llama::RecordCoord<0>{});
+                    if(m_component == 1)
+                        return array.vr(llama::RecordCoord<1>{});
+                    if(m_component == 2)
+                        return array.vr(llama::RecordCoord<2>{});
+                    std::abort();
                 }
             };
 
