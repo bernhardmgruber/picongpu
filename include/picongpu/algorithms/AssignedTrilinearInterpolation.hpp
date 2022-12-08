@@ -23,8 +23,10 @@
 #include <pmacc/result_of_Functor.hpp>
 #include <pmacc/types.hpp>
 
+#include <experimental/simd>
 #include <type_traits>
 
+namespace stdx = std::experimental;
 
 // forward declaration
 namespace picongpu
@@ -76,9 +78,7 @@ namespace picongpu
 
             using type = decltype(*cursor(0, 0, 0) * shapeFunctors[0](0));
 
-            /* The implementation assumes that x is the fastest moving index to iterate over contiguous memory
-             * e.g. a row, to optimize memory fetch operations.
-             */
+#if 0
             auto result_z = type(0.0);
             PMACC_UNROLL(iterations)
             for(int z = T_begin; z <= T_end; ++z)
@@ -100,6 +100,48 @@ namespace picongpu
                 result_z += result_y * shapeFunctors[2](z);
             }
             return result_z;
+#else
+            static_assert(iterations == 4, "Use particle shape PQS!");
+
+            /* The implementation assumes that x is the fastest moving index to iterate over contiguous memory
+             * e.g. a row, to optimize memory fetch operations.
+             */
+            using Simd = stdx::fixed_size_simd<type, 16>;
+            //using Simd = stdx::native_simd<type>;
+            static_assert(Simd{}.size() == 16);
+
+            const auto sfx = Simd(
+                [&](auto ic) LLAMA_LAMBDA_INLINE
+                {
+                    constexpr auto i = static_cast<int>(decltype(ic)::value);
+                    return shapeFunctors[0](T_begin + i % 4);
+                });
+
+            const auto sfy = Simd(
+                [&](auto ic) LLAMA_LAMBDA_INLINE
+                {
+                    constexpr auto i = static_cast<int>(decltype(ic)::value);
+                    return shapeFunctors[1](T_begin + i / 4);
+                });
+
+            auto result_z = Simd(0);
+
+            PMACC_UNROLL(iterations)
+            for(int z = T_begin; z <= T_end; ++z)
+            {
+                const auto fieldData = Simd(
+                    [&](auto ic) LLAMA_LAMBDA_INLINE
+                    {
+                        constexpr auto i = static_cast<int>(decltype(ic)::value);
+                        return *cursor(T_begin + i % 4, T_begin + i / 4, z);
+                    });
+
+                Simd result_y = fieldData * sfx * sfy;
+                result_z += result_y * Simd(shapeFunctors[2](z));
+            }
+
+            return stdx::reduce(result_z);
+#endif
         }
 
         /** Implementation for 2D position*/
