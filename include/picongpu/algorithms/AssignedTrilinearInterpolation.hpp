@@ -23,7 +23,7 @@
 #include <pmacc/result_of_Functor.hpp>
 #include <pmacc/types.hpp>
 
-#include <experimental/simd>
+#include "experimental/simd"
 #include <type_traits>
 
 namespace stdx = std::experimental;
