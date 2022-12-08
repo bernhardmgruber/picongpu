@@ -1431,11 +1431,11 @@ template <typename _Abi, typename>
 
     // _S_generator {{{2
     template <typename _Fp, typename _Tp>
-      inline static constexpr _SimdMember<_Tp> _S_generator(_Fp&& __gen,
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdMember<_Tp> _S_generator(_Fp&& __gen,
 							    _TypeTag<_Tp>)
       {
 	return __generate_vector<_Tp, _S_full_size<_Tp>>([&](
-	  auto __i) constexpr {
+	  auto __i) constexpr __attribute__((always_inline)) {
 	  if constexpr (__i < _S_size<_Tp>)
 	    return __gen(__i);
 	  else
