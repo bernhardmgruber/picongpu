@@ -81,8 +81,13 @@
 //! Macro defining the inline function attribute.
 #if BOOST_LANG_CUDA || BOOST_LANG_HIP
 #    define ALPAKA_FN_INLINE __forceinline__
+#elif defined(__GNUC__) || defined(__clang__)
+#    define ALPAKA_FN_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER) || defined(__INTEL_LLVM_COMPILER)
+#    define ALPAKA_FN_INLINE __forceinline
 #else
-#    define ALPAKA_FN_INLINE inline
+#    define ALPAKA_FN_INLINE inline __attribute__((always_inline))
+#    warning ALPAKA_FN_INLINE is only defined to "inline" for this compiler
 #endif
 
 //! This macro defines a variable lying in global accelerator device memory.
